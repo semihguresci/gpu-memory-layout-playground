@@ -1,0 +1,10 @@
+build/
+.vs/
+*.user
+*.suo
+*.spv
+results/tables/*.csv
+results/tables/*.json
+!results/tables/.gitkeep
+!results/charts/.gitkeep
+/build_cli11
