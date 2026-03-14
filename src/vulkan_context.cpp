@@ -8,11 +8,12 @@
 
 namespace {
 
-VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    VkDebugUtilsMessageTypeFlagsEXT,
-    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void*) {
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+                                              VkDebugUtilsMessageTypeFlagsEXT message_type,
+                                              const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
+                                              void* user_data) {
+    static_cast<void>(message_type);
+    static_cast<void>(user_data);
     if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
         std::cerr << "[Vulkan Validation] " << callback_data->pMessage << "\n";
     }
@@ -20,17 +21,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     return VK_FALSE;
 }
 
-VkDebugUtilsMessengerCreateInfoEXT makeDebugMessengerCreateInfo() {
+VkDebugUtilsMessengerCreateInfoEXT make_debug_messenger_create_info() {
     VkDebugUtilsMessengerCreateInfoEXT debug_info{};
     debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debug_info.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    debug_info.messageType =
-        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    debug_info.pfnUserCallback = debugCallback;
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debug_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    debug_info.pfnUserCallback = debug_callback;
     return debug_info;
 }
 
@@ -43,29 +42,29 @@ VulkanContext::~VulkanContext() {
 bool VulkanContext::initialize(bool enable_validation) {
     validation_enabled_ = enable_validation;
 
-    if (!createInstance(enable_validation)) {
+    if (!create_instance(enable_validation)) {
         return false;
     }
 
     if (validation_enabled_) {
-        if (!setupDebugMessenger()) {
+        if (!setup_debug_messenger()) {
             return false;
         }
     }
 
-    if (!pickPhysicalDevice()) {
+    if (!pick_physical_device()) {
         return false;
     }
 
-    if (!createLogicalDevice()) {
+    if (!create_logical_device()) {
         return false;
     }
 
-    if (!createCommandResources()) {
+    if (!create_command_resources()) {
         return false;
     }
 
-    if (!createTimestampQueryPool()) {
+    if (!create_timestamp_query_pool()) {
         return false;
     }
 
@@ -96,7 +95,7 @@ void VulkanContext::shutdown() {
         device_ = VK_NULL_HANDLE;
     }
 
-    destroyDebugMessenger();
+    destroy_debug_messenger();
 
     if (instance_ != VK_NULL_HANDLE) {
         vkDestroyInstance(instance_, nullptr);
@@ -106,12 +105,12 @@ void VulkanContext::shutdown() {
     physical_device_ = VK_NULL_HANDLE;
     compute_queue_ = VK_NULL_HANDLE;
     compute_queue_family_index_ = 0;
-    timestamp_period_ = 0.0f;
+    timestamp_period_ = 0.0F;
     gpu_timestamps_supported_ = false;
     validation_enabled_ = false;
 }
 
-std::string VulkanContext::selectedDeviceName() const {
+std::string VulkanContext::selected_device_name() const {
     if (physical_device_ == VK_NULL_HANDLE) {
         return "none";
     }
@@ -121,7 +120,27 @@ std::string VulkanContext::selectedDeviceName() const {
     return props.deviceName;
 }
 
-double VulkanContext::measureGpuTimeMs(const std::function<void(VkCommandBuffer)>& record_commands) {
+uint32_t VulkanContext::selected_device_api_version() const {
+    if (physical_device_ == VK_NULL_HANDLE) {
+        return 0U;
+    }
+
+    VkPhysicalDeviceProperties props{};
+    vkGetPhysicalDeviceProperties(physical_device_, &props);
+    return props.apiVersion;
+}
+
+uint32_t VulkanContext::selected_device_driver_version() const {
+    if (physical_device_ == VK_NULL_HANDLE) {
+        return 0U;
+    }
+
+    VkPhysicalDeviceProperties props{};
+    vkGetPhysicalDeviceProperties(physical_device_, &props);
+    return props.driverVersion;
+}
+
+double VulkanContext::measure_gpu_time_ms(const std::function<void(VkCommandBuffer)>& record_commands) {
     if (!gpu_timestamps_supported_ || timestamp_query_pool_ == VK_NULL_HANDLE) {
         return std::numeric_limits<double>::quiet_NaN();
     }
@@ -168,14 +187,8 @@ double VulkanContext::measureGpuTimeMs(const std::function<void(VkCommandBuffer)
 
     std::array<uint64_t, 2> query_data{};
     const VkResult query_result = vkGetQueryPoolResults(
-        device_,
-        timestamp_query_pool_,
-        0,
-        static_cast<uint32_t>(query_data.size()),
-        sizeof(query_data),
-        query_data.data(),
-        sizeof(uint64_t),
-        VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+        device_, timestamp_query_pool_, 0, static_cast<uint32_t>(query_data.size()), sizeof(query_data),
+        query_data.data(), sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
 
     if (query_result != VK_SUCCESS) {
         return std::numeric_limits<double>::quiet_NaN();
@@ -186,26 +199,24 @@ double VulkanContext::measureGpuTimeMs(const std::function<void(VkCommandBuffer)
     return ns / 1000000.0;
 }
 
-bool VulkanContext::createInstance(bool enable_validation) {
-    if (enable_validation && !checkValidationLayerSupport()) {
+bool VulkanContext::create_instance(bool enable_validation) {
+    if (enable_validation && !check_validation_layer_support()) {
         std::cerr << "Validation layer requested but VK_LAYER_KHRONOS_validation is unavailable.\n";
         return false;
     }
 
-    if (enable_validation && !checkDebugUtilsExtensionSupport()) {
+    if (enable_validation && !check_debug_utils_extension_support()) {
         std::cerr << "Validation requested but VK_EXT_debug_utils is unavailable.\n";
         return false;
     }
 
-    const VkApplicationInfo app_info{
-        VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        nullptr,
-        "gpu_memory_layout_experiments",
-        VK_MAKE_VERSION(0, 1, 0),
-        "gpu_memory_layout_experiments",
-        VK_MAKE_VERSION(0, 1, 0),
-        VK_API_VERSION_1_2
-    };
+    const VkApplicationInfo app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                                     nullptr,
+                                     "gpu_memory_layout_experiments",
+                                     VK_MAKE_VERSION(0, 1, 0),
+                                     "gpu_memory_layout_experiments",
+                                     VK_MAKE_VERSION(0, 1, 0),
+                                     VK_API_VERSION_1_2};
 
     std::vector<const char*> extensions;
     if (enable_validation) {
@@ -217,7 +228,7 @@ bool VulkanContext::createInstance(bool enable_validation) {
         layers.push_back("VK_LAYER_KHRONOS_validation");
     }
 
-    VkDebugUtilsMessengerCreateInfoEXT debug_info = makeDebugMessengerCreateInfo();
+    VkDebugUtilsMessengerCreateInfoEXT debug_info = make_debug_messenger_create_info();
 
     VkInstanceCreateInfo instance_info{};
     instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -240,7 +251,7 @@ bool VulkanContext::createInstance(bool enable_validation) {
     return true;
 }
 
-bool VulkanContext::checkValidationLayerSupport() const {
+bool VulkanContext::check_validation_layer_support() {
     uint32_t layer_count = 0;
     vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
     std::vector<VkLayerProperties> available_layers(layer_count);
@@ -255,7 +266,7 @@ bool VulkanContext::checkValidationLayerSupport() const {
     return false;
 }
 
-bool VulkanContext::checkDebugUtilsExtensionSupport() const {
+bool VulkanContext::check_debug_utils_extension_support() {
     uint32_t extension_count = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
     std::vector<VkExtensionProperties> available_extensions(extension_count);
@@ -270,7 +281,7 @@ bool VulkanContext::checkDebugUtilsExtensionSupport() const {
     return false;
 }
 
-bool VulkanContext::setupDebugMessenger() {
+bool VulkanContext::setup_debug_messenger() {
     if (instance_ == VK_NULL_HANDLE) {
         return false;
     }
@@ -281,7 +292,7 @@ bool VulkanContext::setupDebugMessenger() {
         return false;
     }
 
-    VkDebugUtilsMessengerCreateInfoEXT debug_info = makeDebugMessengerCreateInfo();
+    VkDebugUtilsMessengerCreateInfoEXT debug_info = make_debug_messenger_create_info();
     const VkResult result = create_fn(instance_, &debug_info, nullptr, &debug_messenger_);
     if (result != VK_SUCCESS) {
         std::cerr << "vkCreateDebugUtilsMessengerEXT failed with error code " << result << "\n";
@@ -291,7 +302,7 @@ bool VulkanContext::setupDebugMessenger() {
     return true;
 }
 
-void VulkanContext::destroyDebugMessenger() {
+void VulkanContext::destroy_debug_messenger() {
     if (instance_ == VK_NULL_HANDLE || debug_messenger_ == VK_NULL_HANDLE) {
         return;
     }
@@ -305,7 +316,7 @@ void VulkanContext::destroyDebugMessenger() {
     debug_messenger_ = VK_NULL_HANDLE;
 }
 
-std::optional<uint32_t> VulkanContext::findComputeQueueFamily(VkPhysicalDevice physical_device) const {
+std::optional<uint32_t> VulkanContext::find_compute_queue_family(VkPhysicalDevice physical_device) {
     uint32_t family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &family_count, nullptr);
     if (family_count == 0) {
@@ -324,7 +335,7 @@ std::optional<uint32_t> VulkanContext::findComputeQueueFamily(VkPhysicalDevice p
     return std::nullopt;
 }
 
-bool VulkanContext::pickPhysicalDevice() {
+bool VulkanContext::pick_physical_device() {
     uint32_t device_count = 0;
     vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
     if (device_count == 0) {
@@ -336,7 +347,7 @@ bool VulkanContext::pickPhysicalDevice() {
     vkEnumeratePhysicalDevices(instance_, &device_count, devices.data());
 
     for (VkPhysicalDevice candidate : devices) {
-        const auto compute_index = findComputeQueueFamily(candidate);
+        const auto compute_index = find_compute_queue_family(candidate);
         if (compute_index.has_value()) {
             physical_device_ = candidate;
             compute_queue_family_index_ = *compute_index;
@@ -348,31 +359,15 @@ bool VulkanContext::pickPhysicalDevice() {
     return false;
 }
 
-bool VulkanContext::createLogicalDevice() {
-    const float priority = 1.0f;
+bool VulkanContext::create_logical_device() {
+    const float priority = 1.0F;
     const VkDeviceQueueCreateInfo queue_info{
-        VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        nullptr,
-        0,
-        compute_queue_family_index_,
-        1,
-        &priority
-    };
+        VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, compute_queue_family_index_, 1, &priority};
 
     const VkPhysicalDeviceFeatures features{};
 
     const VkDeviceCreateInfo device_info{
-        VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        nullptr,
-        0,
-        1,
-        &queue_info,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        &features
-    };
+        VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, &queue_info, 0, nullptr, 0, nullptr, &features};
 
     const VkResult result = vkCreateDevice(physical_device_, &device_info, nullptr, &device_);
     if (result != VK_SUCCESS) {
@@ -384,7 +379,7 @@ bool VulkanContext::createLogicalDevice() {
     return true;
 }
 
-bool VulkanContext::createCommandResources() {
+bool VulkanContext::create_command_resources() {
     VkCommandPoolCreateInfo pool_info{};
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -417,7 +412,7 @@ bool VulkanContext::createCommandResources() {
     return true;
 }
 
-bool VulkanContext::createTimestampQueryPool() {
+bool VulkanContext::create_timestamp_query_pool() {
     VkPhysicalDeviceProperties props{};
     vkGetPhysicalDeviceProperties(physical_device_, &props);
     timestamp_period_ = props.limits.timestampPeriod;
@@ -427,9 +422,8 @@ bool VulkanContext::createTimestampQueryPool() {
     std::vector<VkQueueFamilyProperties> families(queue_family_count);
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device_, &queue_family_count, families.data());
 
-    gpu_timestamps_supported_ =
-        queue_family_count > compute_queue_family_index_ &&
-        families[compute_queue_family_index_].timestampValidBits > 0;
+    gpu_timestamps_supported_ = queue_family_count > compute_queue_family_index_ &&
+                                families[compute_queue_family_index_].timestampValidBits > 0;
 
     if (!gpu_timestamps_supported_) {
         return true;

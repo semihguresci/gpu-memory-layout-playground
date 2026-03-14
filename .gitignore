@@ -8,3 +8,15 @@ results/tables/*.json
 !results/tables/.gitkeep
 !results/charts/.gitkeep
 /build_cli11
+
+# Experiment-local generated artifacts
+experiments/*/results/charts/*
+experiments/*/results/tables/*
+experiments/*/runs/*
+experiments/*/runs/**/*
+!experiments/*/results/charts/.gitkeep
+!experiments/*/results/tables/.gitkeep
+!experiments/*/runs/.gitkeep
+
+# Local archive for moved benchmark artifacts
+local_artifacts/

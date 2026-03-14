@@ -28,11 +28,14 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 add_executable(gpu_memory_layout_experiments
     src/main.cpp
-    src/app_options.cpp
-    src/json_exporter.cpp
-    src/vulkan_compute_utils.cpp
+    src/experiments/dispatch_basics_experiment.cpp
+    src/experiments/aos_soa_experiment.cpp
+    src/utils/app_options.cpp
+    src/utils/json_exporter.cpp
+    src/utils/vulkan_compute_utils.cpp
+    src/utils/gpu_timestamp_timer.cpp
     src/vulkan_context.cpp
-    src/buffer_utils.cpp
+    src/utils/buffer_utils.cpp
     src/benchmark_runner.cpp
 )
 
@@ -55,6 +58,10 @@ target_compile_definitions(gpu_memory_layout_experiments
 
 if(MSVC)
     target_compile_options(gpu_memory_layout_experiments PRIVATE /W4 /permissive-)
+    set_target_properties(gpu_memory_layout_experiments PROPERTIES
+        VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        VS_DEBUGGER_COMMAND_ARGUMENTS "--validation --experiment all --iterations 10 --warmup 3 --size 16M --output \"${CMAKE_SOURCE_DIR}/results/tables/all_run\""
+    )
 else()
     target_compile_options(gpu_memory_layout_experiments PRIVATE -Wall -Wextra -Wpedantic)
 endif()
