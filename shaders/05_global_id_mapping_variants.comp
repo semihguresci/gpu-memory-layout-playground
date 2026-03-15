@@ -1,0 +1,58 @@
+#version 450
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) readonly buffer SourceBuffer {
+    float src_values[];
+};
+
+layout(set = 0, binding = 1) writeonly buffer DestinationBuffer {
+    float dst_values[];
+};
+
+layout(push_constant) uniform PushConstants {
+    uint element_count;
+    uint mapping_mode;
+    uint fixed_offset;
+    uint total_invocations;
+} pc;
+
+float transformed_value(uint index) {
+    return src_values[index] + float(index & 7u);
+}
+
+void write_value(uint index) {
+    dst_values[index] = transformed_value(index);
+}
+
+void main() {
+    const uint global_id = gl_GlobalInvocationID.x;
+
+    if (pc.mapping_mode == 0u) {
+        if (global_id < pc.element_count) {
+            write_value(global_id);
+        }
+        return;
+    }
+
+    if (pc.mapping_mode == 1u) {
+        if (global_id >= pc.element_count) {
+            return;
+        }
+
+        uint mapped_index = global_id + pc.fixed_offset;
+        if (mapped_index >= pc.element_count) {
+            mapped_index -= pc.element_count;
+        }
+        write_value(mapped_index);
+        return;
+    }
+
+    if (pc.total_invocations == 0u) {
+        return;
+    }
+
+    for (uint index = global_id; index < pc.element_count; index += pc.total_invocations) {
+        write_value(index);
+    }
+}

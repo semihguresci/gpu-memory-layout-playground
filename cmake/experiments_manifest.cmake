@@ -3,5 +3,6 @@ set(EXPERIMENT_MANIFEST_ENTRIES
     "02_local_size_sweep|Local Size Sweep|foundations|run_local_size_sweep_experiment_adapter|ON"
     "03_memory_copy_baseline|Memory Copy Baseline|foundations|run_memory_copy_baseline_experiment_adapter|ON"
     "04_sequential_indexing|Sequential Indexing|foundations|run_sequential_indexing_experiment_adapter|ON"
+    "05_global_id_mapping_variants|Global ID Mapping Variants|foundations|run_global_id_mapping_variants_experiment_adapter|ON"
     "06_aos_vs_soa|AoS vs SoA|memory_layout|run_aos_soa_experiment_adapter|ON"
 )
