@@ -1,0 +1,60 @@
+#version 450
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer PackedParticles {
+    float data[];
+};
+
+layout(push_constant) uniform Params {
+    uint count;
+} params;
+
+const uint kPackedStride = 16u;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= params.count) {
+        return;
+    }
+
+    uint base = id * kPackedStride;
+
+    float coeff0 = data[base + 0u];
+    float coeff1 = data[base + 1u];
+    float coeff2 = data[base + 2u];
+    vec3 position = vec3(data[base + 3u], data[base + 4u], data[base + 5u]);
+    float mass = data[base + 6u];
+    vec3 velocity = vec3(data[base + 7u], data[base + 8u], data[base + 9u]);
+    float dt = data[base + 10u];
+    vec4 color = vec4(data[base + 11u], data[base + 12u], data[base + 13u], data[base + 14u]);
+    float scalar = data[base + 15u];
+
+    vec3 adv = (velocity * dt) + (vec3(coeff0, coeff1, coeff2) * 0.001);
+    position += adv;
+    mass += (scalar * 0.0001) + 0.000001;
+    velocity += vec3(coeff0, coeff1, coeff2) * 0.0002;
+    color.xyz = (color.xyz * 0.999) + (adv * 0.001);
+    color.w += 0.0005;
+    scalar = (scalar * 0.5) + (mass * 0.01);
+    coeff0 += 0.0001;
+    coeff1 += 0.0002;
+    coeff2 += 0.0003;
+
+    data[base + 0u] = coeff0;
+    data[base + 1u] = coeff1;
+    data[base + 2u] = coeff2;
+    data[base + 3u] = position.x;
+    data[base + 4u] = position.y;
+    data[base + 5u] = position.z;
+    data[base + 6u] = mass;
+    data[base + 7u] = velocity.x;
+    data[base + 8u] = velocity.y;
+    data[base + 9u] = velocity.z;
+    data[base + 10u] = dt;
+    data[base + 11u] = color.x;
+    data[base + 12u] = color.y;
+    data[base + 13u] = color.z;
+    data[base + 14u] = color.w;
+    data[base + 15u] = scalar;
+}

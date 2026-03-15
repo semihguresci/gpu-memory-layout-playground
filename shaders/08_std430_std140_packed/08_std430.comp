@@ -1,0 +1,43 @@
+#version 450
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+struct Particle {
+    float coeffs[3];
+    vec3 position;
+    float mass;
+    vec3 velocity;
+    float dt;
+    vec4 color;
+    float scalar;
+};
+
+layout(std430, binding = 0) buffer Particles {
+    Particle data[];
+};
+
+layout(push_constant) uniform Params {
+    uint count;
+} params;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= params.count) {
+        return;
+    }
+
+    Particle particle = data[id];
+
+    vec3 adv = (particle.velocity * particle.dt) + (vec3(particle.coeffs[0], particle.coeffs[1], particle.coeffs[2]) * 0.001);
+    particle.position += adv;
+    particle.mass += (particle.scalar * 0.0001) + 0.000001;
+    particle.velocity += vec3(particle.coeffs[0], particle.coeffs[1], particle.coeffs[2]) * 0.0002;
+    particle.color.xyz = (particle.color.xyz * 0.999) + (adv * 0.001);
+    particle.color.w += 0.0005;
+    particle.scalar = (particle.scalar * 0.5) + (particle.mass * 0.01);
+    particle.coeffs[0] += 0.0001;
+    particle.coeffs[1] += 0.0002;
+    particle.coeffs[2] += 0.0003;
+
+    data[id] = particle;
+}

@@ -50,6 +50,11 @@ EXPERIMENT_CONFIG = {
         "collect_script": ROOT / "experiments" / "07_aosoa_blocked_layout" / "scripts" / "collect_run.py",
         "default_size": "512M",
     },
+    "08_std430_std140_packed": {
+        "output": ROOT / "experiments" / "08_std430_std140_packed" / "results" / "tables" / "benchmark_results.json",
+        "collect_script": ROOT / "experiments" / "08_std430_std140_packed" / "scripts" / "collect_run.py",
+        "default_size": "128M",
+    },
 }
 EXPERIMENT_IDS = tuple(EXPERIMENT_CONFIG.keys())
 
