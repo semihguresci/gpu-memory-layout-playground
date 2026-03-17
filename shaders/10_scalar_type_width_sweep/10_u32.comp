@@ -1,0 +1,27 @@
+#version 450
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer ScalarData {
+    uint data[];
+};
+
+layout(push_constant) uniform Params {
+    uint count;
+} params;
+
+float update_value(float value) {
+    float v = clamp(value, 0.0, 1.0);
+    float updated = (v * 0.98125) + 0.004375 + ((v * v) * 0.0003);
+    return clamp(updated, 0.0, 1.0);
+}
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= params.count) {
+        return;
+    }
+
+    float value = uintBitsToFloat(data[id]);
+    data[id] = floatBitsToUint(update_value(value));
+}

@@ -1,6 +1,9 @@
 #include "utils/buffer_utils.hpp"
 
+#include "vulkan_context.hpp"
+
 #include <cstdint>
+#include <iostream>
 
 namespace {
 
@@ -60,6 +63,18 @@ bool create_buffer_resource(VkPhysicalDevice physical_device, VkDevice device, V
     }
 
     out_resource.size = size;
+    return true;
+}
+
+bool map_buffer_memory(VulkanContext& context, const BufferResource& buffer, const char* label, void*& mapped_ptr) {
+    mapped_ptr = nullptr;
+    const VkResult map_result = vkMapMemory(context.device(), buffer.memory, 0U, buffer.size, 0U, &mapped_ptr);
+    if (map_result != VK_SUCCESS || mapped_ptr == nullptr) {
+        std::cerr << "vkMapMemory failed for " << label << " with VkResult=" << map_result << ".\n";
+        mapped_ptr = nullptr;
+        return false;
+    }
+
     return true;
 }
 

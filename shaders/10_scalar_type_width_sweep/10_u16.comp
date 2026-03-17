@@ -1,0 +1,47 @@
+#version 450
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer ScalarData {
+    uint data[];
+};
+
+layout(push_constant) uniform Params {
+    uint count;
+} params;
+
+const float kInvU16 = 1.0 / 65535.0;
+
+float update_value(float value) {
+    float v = clamp(value, 0.0, 1.0);
+    float updated = (v * 0.98125) + 0.004375 + ((v * v) * 0.0003);
+    return clamp(updated, 0.0, 1.0);
+}
+
+uint quantize_u16(float value) {
+    float scaled = (clamp(value, 0.0, 1.0) * 65535.0) + 0.5;
+    return uint(clamp(scaled, 0.0, 65535.0));
+}
+
+void main() {
+    uint packed_index = gl_GlobalInvocationID.x;
+    uint base_index = packed_index * 2u;
+    if (base_index >= params.count) {
+        return;
+    }
+
+    uint packed = data[packed_index];
+    uint low_raw = packed & 0xFFFFu;
+    uint high_raw = (packed >> 16u) & 0xFFFFu;
+
+    float low = update_value(float(low_raw) * kInvU16);
+    uint low_quantized = quantize_u16(low);
+
+    uint high_quantized = high_raw;
+    if ((base_index + 1u) < params.count) {
+        float high = update_value(float(high_raw) * kInvU16);
+        high_quantized = quantize_u16(high);
+    }
+
+    data[packed_index] = low_quantized | (high_quantized << 16u);
+}

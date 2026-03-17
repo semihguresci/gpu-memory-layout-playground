@@ -1,6 +1,7 @@
 #include "experiments/sequential_indexing_experiment.hpp"
 
 #include "utils/buffer_utils.hpp"
+#include "utils/experiment_metrics.hpp"
 #include "utils/vulkan_compute_utils.hpp"
 #include "vulkan_context.hpp"
 
@@ -15,6 +16,8 @@
 #include <vector>
 
 namespace {
+
+using ExperimentMetrics::compute_throughput_elements_per_second;
 
 constexpr const char* kExperimentId = "04_sequential_indexing";
 constexpr uint32_t kLocalSizeX = 256U;
@@ -76,15 +79,6 @@ bool validate_output_pattern(const float* values, uint32_t element_count) {
     }
 
     return true;
-}
-
-double compute_throughput_elements_per_second(uint32_t problem_size, uint32_t dispatch_count, double dispatch_gpu_ms) {
-    if (!std::isfinite(dispatch_gpu_ms) || dispatch_gpu_ms <= 0.0) {
-        return 0.0;
-    }
-
-    const double elements = static_cast<double>(problem_size) * static_cast<double>(dispatch_count);
-    return (elements * 1000.0) / dispatch_gpu_ms;
 }
 
 double compute_effective_gbps(uint32_t problem_size, uint32_t dispatch_count, double dispatch_gpu_ms) {

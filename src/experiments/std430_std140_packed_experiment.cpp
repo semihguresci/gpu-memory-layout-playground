@@ -2,6 +2,7 @@
 #include "experiments/std430_std140_packed_experiment.hpp"
 
 #include "utils/buffer_utils.hpp"
+#include "utils/experiment_metrics.hpp"
 #include "utils/layout_assert.hpp"
 #include "utils/vulkan_compute_utils.hpp"
 #include "vulkan_context.hpp"
@@ -18,6 +19,8 @@
 #include <vector>
 
 namespace {
+
+using ExperimentMetrics::compute_throughput_elements_per_second;
 
 constexpr const char* kExperimentId = "08_std430_std140_packed";
 constexpr uint32_t kWorkgroupSize = 256U;
@@ -459,18 +462,6 @@ bool validate_packed_particles(const float* particles, uint32_t count) {
     return true;
 }
 
-bool map_buffer_memory(VulkanContext& context, const BufferResource& buffer, const char* label, void*& mapped_ptr) {
-    mapped_ptr = nullptr;
-    const VkResult map_result = vkMapMemory(context.device(), buffer.memory, 0U, buffer.size, 0U, &mapped_ptr);
-    if (map_result != VK_SUCCESS || mapped_ptr == nullptr) {
-        std::cerr << "vkMapMemory failed for " << label << " with VkResult=" << map_result << ".\n";
-        mapped_ptr = nullptr;
-        return false;
-    }
-
-    return true;
-}
-
 bool create_single_buffer_pipeline_resources(VulkanContext& context, const std::string& shader_path,
                                              VkDeviceSize buffer_size, const char* label,
                                              SingleBufferPipelineResources& out_resources) {
@@ -597,15 +588,6 @@ double run_dispatch(VulkanContext& context, uint32_t particles, const SingleBuff
             vkCmdDispatch(command_buffer, group_count, 1U, 1U);
         }
     });
-}
-
-double compute_throughput_elements_per_second(uint32_t particles, uint32_t dispatch_count, double dispatch_gpu_ms) {
-    if (!std::isfinite(dispatch_gpu_ms) || dispatch_gpu_ms <= 0.0) {
-        return 0.0;
-    }
-
-    const double elements = static_cast<double>(particles) * static_cast<double>(dispatch_count);
-    return (elements * 1000.0) / dispatch_gpu_ms;
 }
 
 VkDeviceSize storage_stride_bytes(LayoutVariant variant) {

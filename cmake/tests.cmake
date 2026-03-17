@@ -64,6 +64,7 @@ function(configure_gpu_memory_layout_tests)
         tests/unit/app_options_tests.cpp
         tests/unit/benchmark_runner_tests.cpp
         tests/unit/json_exporter_tests.cpp
+        tests/unit/scalar_type_width_utils_tests.cpp
         tests/unit/vulkan_compute_utils_tests.cpp
     )
 
@@ -71,6 +72,7 @@ function(configure_gpu_memory_layout_tests)
         src/benchmark_runner.cpp
         src/utils/app_options.cpp
         src/utils/json_exporter.cpp
+        src/utils/scalar_type_width_utils.cpp
         src/utils/vulkan_compute_utils.cpp
     )
 

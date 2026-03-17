@@ -1,0 +1,56 @@
+#version 450
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer ScalarData {
+    uint data[];
+};
+
+layout(push_constant) uniform Params {
+    uint count;
+} params;
+
+const float kInvU8 = 1.0 / 255.0;
+
+float update_value(float value) {
+    float v = clamp(value, 0.0, 1.0);
+    float updated = (v * 0.98125) + 0.004375 + ((v * v) * 0.0003);
+    return clamp(updated, 0.0, 1.0);
+}
+
+uint quantize_u8(float value) {
+    float scaled = (clamp(value, 0.0, 1.0) * 255.0) + 0.5;
+    return uint(clamp(scaled, 0.0, 255.0));
+}
+
+uint read_lane_u8(uint packed, uint lane) {
+    return (packed >> (lane * 8u)) & 0xFFu;
+}
+
+void main() {
+    uint packed_index = gl_GlobalInvocationID.x;
+    uint base_index = packed_index * 4u;
+    if (base_index >= params.count) {
+        return;
+    }
+
+    uint packed = data[packed_index];
+
+    uint lane0 = read_lane_u8(packed, 0u);
+    uint lane1 = read_lane_u8(packed, 1u);
+    uint lane2 = read_lane_u8(packed, 2u);
+    uint lane3 = read_lane_u8(packed, 3u);
+
+    lane0 = quantize_u8(update_value(float(lane0) * kInvU8));
+    if ((base_index + 1u) < params.count) {
+        lane1 = quantize_u8(update_value(float(lane1) * kInvU8));
+    }
+    if ((base_index + 2u) < params.count) {
+        lane2 = quantize_u8(update_value(float(lane2) * kInvU8));
+    }
+    if ((base_index + 3u) < params.count) {
+        lane3 = quantize_u8(update_value(float(lane3) * kInvU8));
+    }
+
+    data[packed_index] = lane0 | (lane1 << 8u) | (lane2 << 16u) | (lane3 << 24u);
+}
