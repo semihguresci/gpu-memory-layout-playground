@@ -65,6 +65,11 @@ EXPERIMENT_CONFIG = {
         "collect_script": ROOT / "experiments" / "10_scalar_type_width_sweep" / "scripts" / "collect_run.py",
         "default_size": "128M",
     },
+    "11_coalesced_vs_strided": {
+        "output": ROOT / "experiments" / "11_coalesced_vs_strided" / "results" / "tables" / "benchmark_results.json",
+        "collect_script": ROOT / "experiments" / "11_coalesced_vs_strided" / "scripts" / "collect_run.py",
+        "default_size": "128M",
+    },
 }
 EXPERIMENT_IDS = tuple(EXPERIMENT_CONFIG.keys())
 

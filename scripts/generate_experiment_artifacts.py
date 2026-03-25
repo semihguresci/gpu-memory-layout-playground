@@ -237,6 +237,33 @@ def generate_experiment_08(collect_run: bool) -> bool:
     return True
 
 
+def generate_experiment_11(collect_run: bool) -> bool:
+    exp_root = ROOT / "experiments" / "11_coalesced_vs_strided"
+    scripts_root = exp_root / "scripts"
+    benchmark_json = exp_root / "results" / "tables" / "benchmark_results.json"
+    runs_root = exp_root / "runs"
+
+    has_runs = runs_root.exists() and any(path.suffix == ".json" for path in runs_root.rglob("*.json"))
+    if not benchmark_json.exists() and not has_runs:
+        print("[info] No benchmark logs found. Nothing to generate.")
+        print(
+            "[info] Collect data first with: "
+            "python scripts/run_experiment_data_collection.py --experiment 11_coalesced_vs_strided"
+        )
+        return False
+
+    if collect_run and benchmark_json.exists():
+        run_command([sys.executable, str(scripts_root / "collect_run.py")], ROOT)
+
+    if benchmark_json.exists():
+        run_command([sys.executable, str(scripts_root / "analyze_coalesced_vs_strided.py")], ROOT)
+    else:
+        run_command([sys.executable, str(scripts_root / "analyze_coalesced_vs_strided.py"), "--skip-current"], ROOT)
+
+    run_command([sys.executable, str(scripts_root / "plot_results.py")], ROOT)
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Regenerate experiment-local benchmark tables/charts from existing run logs."
@@ -253,6 +280,7 @@ def main() -> None:
             "06_aos_vs_soa",
             "07_aosoa_blocked_layout",
             "08_std430_std140_packed",
+            "11_coalesced_vs_strided",
         ],
         help="Experiment artifact bundle to generate.",
     )
@@ -281,6 +309,8 @@ def main() -> None:
             generated = generate_experiment_07(collect_run=args.collect_run)
         elif args.experiment == "08_std430_std140_packed":
             generated = generate_experiment_08(collect_run=args.collect_run)
+        elif args.experiment == "11_coalesced_vs_strided":
+            generated = generate_experiment_11(collect_run=args.collect_run)
     except subprocess.CalledProcessError as exc:
         print(f"[error] Command failed with exit code {exc.returncode}", file=sys.stderr)
         raise SystemExit(exc.returncode) from exc

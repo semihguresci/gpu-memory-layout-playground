@@ -9,4 +9,5 @@ set(EXPERIMENT_MANIFEST_ENTRIES
     "08_std430_std140_packed|std430 vs std140 vs Packed|memory_layout|run_std430_std140_packed_experiment_adapter|ON"
     "09_vec3_vec4_padding_costs|vec3 vs vec4 Padding Costs|memory_layout|run_vec3_vec4_padding_costs_experiment_adapter|ON"
     "10_scalar_type_width_sweep|Scalar Type Width Sweep|memory_layout|run_scalar_type_width_sweep_experiment_adapter|ON"
+    "11_coalesced_vs_strided|Coalesced vs Strided Access|access_patterns|run_coalesced_vs_strided_experiment_adapter|ON"
 )
